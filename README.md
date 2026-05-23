@@ -151,6 +151,79 @@ The final training set contains **13 features** after encoding and **1,870 balan
 
 ---
 
+## Model Results
+
+The Logistic Regression model was trained on the SMOTE-balanced training set (1,870 samples) and evaluated on the original-distribution test set (240 samples, 6 positive cases).
+
+### Performance Metrics
+
+| Metric | Value |
+|---|---|
+| ROC-AUC | **0.9922** |
+| Average Precision | **0.8333** |
+| Best F1 Score | **0.7273** (threshold = 0.82) |
+
+> Accuracy is omitted intentionally — with 97.5% of test samples in class 0, a model that always predicts "no depression" achieves 97.5% accuracy while being completely useless for the task.
+
+### ROC and Precision-Recall Curves
+
+![ROC and PR Curves](assets/09_roc_pr_curves.png)
+
+The ROC-AUC of **0.99** indicates near-perfect separability between classes. The Precision-Recall curve shows an Average Precision of **0.83**, substantially above the random baseline of 2.6% (class prevalence).
+
+### Confusion Matrices
+
+![Confusion Matrices](assets/08_confusion_matrices.png)
+
+At the tuned threshold (0.82), the model correctly identifies **4 out of 6 depression cases** in the test set, with only 3 false positives out of 234 non-depressed samples.
+
+### Feature Importance
+
+![Feature Coefficients](assets/10_feature_coefficients.png)
+
+The coefficients confirm the EDA findings: **stress level**, **anxiety level**, and **daily social media hours** are the strongest positive predictors of depression, while **sleep hours** is the strongest negative predictor.
+
+---
+
+## Hyperparameter Tuning
+
+`GridSearchCV` with 5-fold `StratifiedKFold` cross-validation was used to search over 36 parameter combinations across two regularization strategies (L1 and L2) and a range of `C` values.
+
+### Search Space
+
+| Parameter | Values tested |
+|---|---|
+| `C` (regularization strength) | 0.001, 0.01, 0.1, 1, 10, 100 |
+| `penalty` | l1, l2 |
+| `solver` | lbfgs, liblinear, saga |
+| Scoring metric | ROC-AUC |
+
+### Best Configuration
+
+| Parameter | Value |
+|---|---|
+| `C` | 0.1 |
+| `penalty` | l2 |
+| `solver` | lbfgs |
+| Best CV ROC-AUC | 0.9918 |
+
+### Baseline vs. Tuned Model
+
+![Baseline vs Tuned Curves](assets/11_baseline_vs_tuned.png)
+
+![Confusion Matrices Comparison](assets/12_cm_baseline_vs_tuned.png)
+
+| Metric | Baseline | Tuned | Improvement |
+|---|---|---|---|
+| ROC-AUC | 0.9922 | **0.9936** | +0.0014 |
+| Average Precision | 0.8333 | **0.8626** | +0.0293 |
+| Best F1 Score | 0.7273 | **0.7692** | +0.0419 |
+| Depression Recall | 0.67 | **0.83** | +0.16 |
+
+The tuned model (C=0.1, L2) correctly identifies **5 out of 6 depression cases** in the test set, up from 4 in the baseline. The stronger regularization (C=0.1 vs default C=1) reduces overfitting and improves generalization to the minority class.
+
+---
+
 ## Project Structure
 
 ```
@@ -165,7 +238,9 @@ BlueFlags/
 │       └── y_test.csv
 ├── notebooks/
 │   ├── 01_eda.ipynb               # Exploratory Data Analysis
-│   └── 02_preprocessing.ipynb     # Encoding, scaling, SMOTE
+│   ├── 02_preprocessing.ipynb     # Encoding, scaling, SMOTE
+│   ├── 03_model.ipynb             # Logistic Regression training and evaluation
+│   └── 04_tuning.ipynb            # GridSearchCV hyperparameter tuning
 ├── outputs/
 │   └── figures/                   # Plots generated during EDA (gitignored)
 ├── .vscode/
@@ -226,6 +301,8 @@ Select the **Python (.venv)** kernel when opening any notebook.
 |---|---|
 | `notebooks/01_eda.ipynb` | Exploratory Data Analysis — class balance, distributions, correlations |
 | `notebooks/02_preprocessing.ipynb` | Encoding, scaling, train/test split, SMOTE |
+| `notebooks/03_model.ipynb` | Logistic Regression training, threshold tuning, evaluation, and coefficients |
+| `notebooks/04_tuning.ipynb` | GridSearchCV over C, penalty, and solver — baseline vs. tuned comparison |
 
 ---
 
@@ -233,9 +310,9 @@ Select the **Python (.venv)** kernel when opening any notebook.
 
 - [x] Exploratory Data Analysis
 - [x] Preprocessing — encoding, scaling, SMOTE
-- [ ] Logistic Regression baseline model
-- [ ] Model evaluation (ROC-AUC, F1, confusion matrix)
-- [ ] Hyperparameter tuning
+- [x] Logistic Regression model training
+- [x] Model evaluation — ROC-AUC 0.99, F1 0.73, confusion matrix
+- [x] Hyperparameter tuning — GridSearchCV, best: C=0.1, l2, lbfgs (F1 0.77)
 
 ---
 
