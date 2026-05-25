@@ -303,6 +303,7 @@ Selecione o kernel **Python (.venv)** ao abrir qualquer notebook.
 | `notebooks/02_preprocessing.ipynb` | Codificação, escalonamento, divisão treino/teste, SMOTE |
 | `notebooks/03_model.ipynb` | Treinamento da Regressão Logística, ajuste de threshold, avaliação e coeficientes |
 | `notebooks/04_tuning.ipynb` | GridSearchCV sobre C, penalty e solver — comparação base vs. ajustado |
+| `notebooks/05_model_comparison.ipynb` | Comparação de 4 classificadores (LR, Random Forest, Gradient Boosting, SVM) |
 
 ---
 
@@ -313,6 +314,7 @@ Selecione o kernel **Python (.venv)** ao abrir qualquer notebook.
 - [x] Treinamento do modelo de Regressão Logística
 - [x] Avaliação do modelo — ROC-AUC 0,99, F1 0,73, matriz de confusão
 - [x] Ajuste de hiperparâmetros — GridSearchCV, melhor: C=0,1, l2, lbfgs (F1 0,77)
+- [ ] Comparação de modelos — Logistic Regression vs Random Forest vs Gradient Boosting vs SVM
 
 ---
 
