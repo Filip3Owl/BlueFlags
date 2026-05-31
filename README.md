@@ -334,6 +334,82 @@ O modelo ajustado ganha **1 caso verdadeiro adicional detectado** ao custo de 1 
 
 ---
 
+## Comparação de Modelos
+
+Com o pipeline de pré-processamento e o protocolo de avaliação estabelecidos, quatro classificadores foram treinados nas mesmas condições — mesmo conjunto de treino balanceado pelo SMOTE, mesmo conjunto de teste original — para determinar se algoritmos mais complexos superam a Regressão Logística neste problema.
+
+| Modelo | Característica principal |
+|---|---|
+| **Logistic Regression** (ajustada) | Baseline — melhor config do GridSearchCV (C=0,1, l2) |
+| **Random Forest** | Ensemble de 300 árvores, robusto a desbalanceamento |
+| **Gradient Boosting** | Boosting sequencial, bom para classes minoritárias |
+| **SVM (kernel RBF)** | Alta capacidade de separação em espaços de alta dimensão |
+
+---
+
+### Curvas ROC e Precisão-Recall — Todos os Modelos
+
+![Comparação de Curvas ROC e PR](assets/13_roc_pr_comparison.png)
+
+**Curva ROC (esquerda):** Random Forest e Gradient Boosting sobem verticalmente até o canto superior esquerdo com AUC = 1,000 — separabilidade perfeita. Logistic Regression (AUC = 0,994) e SVM (AUC = 0,991) ficam ligeiramente abaixo, mas ainda no intervalo excelente. As quatro curvas estão muito próximas visualmente, o que indica que todos os modelos aprenderam o sinal discriminativo do dataset.
+
+**Curva Precisão-Recall (direita):** A diferença entre os modelos é muito mais visível aqui. As curvas de RF e GB permanecem em precisão = 1,0 ao longo de todo o eixo de recall — nunca geram um falso positivo enquanto aumentam o recall. A LR mantém alta precisão até recall ≈ 0,83, depois cai. O SVM apresenta a curva mais irregular, com precisão oscilando entre 0,50 e 0,80 na região de recall alto.
+
+> **Insight:** A curva PR revela o que a ROC esconde. Enquanto as quatro curvas ROC parecem quase idênticas, a curva PR mostra que RF e GB dominam o espaço precisão-recall de forma ampla — a área sob suas curvas (AP = 1,000) é 16% maior do que a da LR (AP = 0,863) e 30% maior do que a do SVM (AP = 0,768).
+
+---
+
+### Matrizes de Confusão — Threshold Otimizado para F1
+
+![Matrizes de Confusão — Comparação](assets/14_confusion_matrices_comparison.png)
+
+Cada matriz usa o threshold que maximiza o F1-score para aquele modelo. Com apenas 6 casos reais de depressão no teste, cada célula tem peso significativo.
+
+| Modelo | TN | FP | FN | TP | Detectados |
+|---|---|---|---|---|---|
+| **Logistic Regression** | 232 | 2 | 1 | 5 | 5/6 (83%) |
+| **Random Forest** | 234 | 0 | 0 | 6 | **6/6 (100%)** |
+| **Gradient Boosting** | 234 | 0 | 0 | 6 | **6/6 (100%)** |
+| **SVM (RBF)** | 233 | 1 | 2 | 4 | 4/6 (67%) |
+
+Random Forest e Gradient Boosting alcançaram **detecção perfeita** — identificaram os 6 casos de depressão sem gerar nenhum alarme falso (threshold = 0,16 e 0,11, respectivamente). O Gradient Boosting usa threshold baixo, o que indica que atribui probabilidades absolutas altas à classe positiva com muita confiança.
+
+O SVM apresentou o pior desempenho: perdeu 2 dos 6 casos e ainda gerou 1 falso alarme — o pior custo-benefício do grupo.
+
+> **Atenção — limitação do tamanho amostral:** Com apenas 6 casos positivos no teste, os resultados perfeitos de RF e GB devem ser interpretados com cautela. Em datasets tão pequenos, um único caso a mais ou a menos altera todas as métricas de forma dramática. A validação cruzada com mais folds ou um conjunto de teste maior seria necessária para confirmar a superioridade desses modelos de forma estatisticamente robusta.
+
+---
+
+### Comparação de Métricas por Modelo
+
+![Comparação de Métricas](assets/15_metrics_bar_comparison.png)
+
+O gráfico de barras horizontais ordena os modelos da melhor para a pior performance em cada métrica, destacando em cor o vencedor de cada categoria. Random Forest e Gradient Boosting aparecem coloridos em todas as quatro métricas — eles empatam no primeiro lugar em ROC-AUC, AP, F1 e Recall.
+
+**Ranking por métrica:**
+
+| Métrica | 1º | 2º | 3º | 4º |
+|---|---|---|---|---|
+| ROC-AUC | RF / GB (1,000) | LR (0,994) | SVM (0,991) | — |
+| Precisão Média (AP) | RF / GB (1,000) | LR (0,863) | SVM (0,768) | — |
+| Melhor F1 | RF / GB (1,000) | LR (0,769) | SVM (0,727) | — |
+| Recall (Depressão) | RF / GB (1,000) | LR (0,833) | SVM (0,667) | — |
+
+**Tabela completa:**
+
+| Modelo | ROC-AUC | AP | F1 | Threshold | Recall | TP | FN | FP |
+|---|---|---|---|---|---|---|---|---|
+| Random Forest | **1,0000** | **1,0000** | **1,0000** | 0,16 | **1,00** | **6** | **0** | **0** |
+| Gradient Boosting | **1,0000** | **1,0000** | **1,0000** | 0,11 | **1,00** | **6** | **0** | **0** |
+| Logistic Regression | 0,9936 | 0,8626 | 0,7692 | 0,69 | 0,83 | 5 | 1 | 2 |
+| SVM (RBF) | 0,9915 | 0,7676 | 0,7273 | 0,11 | 0,67 | 4 | 2 | 1 |
+
+> **Insight — Por que os ensembles dominam:** Random Forest e Gradient Boosting constroem múltiplas fronteiras de decisão não-lineares que capturam interações entre features (ex: alto `stress_level` combinado com baixo `sleep_hours`) que a Regressão Logística modela apenas de forma linear. Para um dataset com sinais fracos e classe minoritária escassa, a capacidade de capturar essas interações é a diferença entre detectar 5/6 e 6/6 casos.
+
+> **Recomendação clínica:** Para triagem de saúde mental — onde perder um caso real é o custo mais alto — **Random Forest ou Gradient Boosting são os modelos recomendados**. Ambos detectaram 100% dos casos de depressão no conjunto de teste sem gerar nenhum falso alarme. A Regressão Logística permanece como baseline interpretável: seus coeficientes explicam *por que* uma predição foi feita, o que tem valor em contextos onde a explicabilidade é exigida.
+
+---
+
 ## Estrutura do Projeto
 
 ```
@@ -425,7 +501,7 @@ Selecione o kernel **Python (.venv)** ao abrir qualquer notebook.
 - [x] Treinamento do modelo de Regressão Logística
 - [x] Avaliação do modelo — ROC-AUC 0,99, F1 0,73, matriz de confusão
 - [x] Ajuste de hiperparâmetros — GridSearchCV, melhor: C=0,1, l2, lbfgs (F1 0,77)
-- [ ] Comparação de modelos — Logistic Regression vs Random Forest vs Gradient Boosting vs SVM
+- [x] Comparação de modelos — Random Forest e Gradient Boosting alcançaram AUC e F1 perfeitos (1,000); LR mantém vantagem em interpretabilidade
 
 ---
 
